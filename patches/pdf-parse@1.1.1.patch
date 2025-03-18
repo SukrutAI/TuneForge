@@ -1,0 +1,19 @@
+diff --git a/node_modules/pdf-parse/.bun-tag-36f0ed0075ee40c6 b/.bun-tag-36f0ed0075ee40c6
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/node_modules/pdf-parse/.bun-tag-6a44be2ea276a9eb b/.bun-tag-6a44be2ea276a9eb
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/index.js b/index.js
+index e9fc367a00904fca3385a05b2b435fed23d14d77..fb8eb89a92839bb22c5b1b862398a6c732c85b81 100644
+--- a/index.js
++++ b/index.js
+@@ -9,7 +9,7 @@ let isDebugMode = !module.parent;
+ 
+ 
+ //for testing purpose
+-if (isDebugMode) {
++if (false) {
+ 
+     let PDF_FILE = './test/data/05-versions-space.pdf';
+     let dataBuffer = Fs.readFileSync(PDF_FILE);
