@@ -16,7 +16,7 @@ TuneForge is a powerful dataset generation tool for training and fine-tuning Lar
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/TuneForge.git
+git clone https://github.com/SukrutAI/TuneForge.git
 cd TuneForge
 
 # Install dependencies with Bun
