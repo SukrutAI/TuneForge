@@ -255,7 +255,9 @@ Generate ${sampleCount} high-quality monolingual text samples distributed across
                 'marathi': 'mr',
                 'gujarati': 'gu',
                 'kannada': 'kn',
-                'malayalam': 'ml'
+                'malayalam': 'ml',
+                'punjabi': 'pa',
+                'urdu': 'ur',
             };
             
             if (languageFixMap[sample.language]) {
@@ -456,7 +458,19 @@ Generate ${sampleCount} high-quality benchmark evaluation examples based on this
                 'chinese': 'zh',
                 'arabic': 'ar',
                 'hindi': 'hi',
-                'russian': 'ru'
+                'russian': 'ru',
+                "urdu": "ur",
+                "bengali": "bn",
+                "tamil": "ta",
+                "telugu": "te",
+                "marathi": "mr",
+                "gujarati": "gu",
+                "kannada": "kn",
+                "malayalam": "ml",
+                "punjabi": "pa",
+                "korean": "ko",
+                "japanese": "ja"
+                
             };
             
             if (languageFixMap[sample.language]) {

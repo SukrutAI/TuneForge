@@ -22,7 +22,10 @@ const INDIC_LANGUAGES = {
     'pa': 'Punjabi',
     'or': 'Odia',
     'as': 'Assamese',
-    'sa': 'Sanskrit'
+    'sa': 'Sanskrit',
+    'ur': 'Urdu',
+    'ar': 'Arabic',
+    'en': 'English',
 };
 
 // Zod schema for summarization corpus (crosssum_in style)

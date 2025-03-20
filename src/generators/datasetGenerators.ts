@@ -107,11 +107,11 @@ const summarizationSchema = z.object({
  * @param sampleCount Number of samples to generate
  */
 export async function generateQADataset(
-    chunk: string, 
-    computeInfo: ComputeInfo, 
-    fileName: string, 
-    chunkIndex: number, 
-    model: any, 
+    chunk: string,
+    computeInfo: ComputeInfo,
+    fileName: string,
+    chunkIndex: number,
+    model: any,
     sampleCount: number
 ) {
     try {
@@ -119,7 +119,7 @@ export async function generateQADataset(
         const basicCount = Math.ceil(sampleCount * 0.3);      // 30% basic questions
         const intermediateCount = Math.ceil(sampleCount * 0.5); // 50% intermediate questions
         const advancedCount = Math.floor(sampleCount * 0.2);   // 20% advanced questions
-        
+
         // Ensure distribution adds up to sample count
         const totalCount = basicCount + intermediateCount + advancedCount;
         const adjustedAdvancedCount = advancedCount + (sampleCount - totalCount);
@@ -167,7 +167,7 @@ Generate ${sampleCount} high-quality question-answer pairs with varying difficul
             }
             return sample;
         });
-        
+
         // Return balanced samples
         return { samples };
     } catch (error) {
@@ -186,11 +186,11 @@ Generate ${sampleCount} high-quality question-answer pairs with varying difficul
  * @param sampleCount Number of samples to generate
  */
 export async function generateRPDataset(
-    chunk: string, 
-    computeInfo: ComputeInfo, 
-    fileName: string, 
-    chunkIndex: number, 
-    model: any, 
+    chunk: string,
+    computeInfo: ComputeInfo,
+    fileName: string,
+    chunkIndex: number,
+    model: any,
     sampleCount: number
 ) {
     try {
@@ -229,7 +229,7 @@ Generate ${sampleCount} role-playing scenarios with example conversations based 
             if (sample.system_instruction.length < 50) {
                 sample.system_instruction = `${sample.system_instruction} Be informative, accurate, and responsive to the specific details of the user's questions. Base your responses only on the actual content provided about this topic.`;
             }
-            
+
             // Ensure conversation has enough turns
             if (sample.example_conversation.length < 4) {
                 // Add additional turns to reach minimum length
@@ -237,16 +237,16 @@ Generate ${sampleCount} role-playing scenarios with example conversations based 
                     const isUser = sample.example_conversation.length % 2 === 0;
                     sample.example_conversation.push({
                         role: isUser ? 'user' : 'assistant',
-                        content: isUser 
-                            ? "Could you elaborate more on that specific aspect?" 
+                        content: isUser
+                            ? "Could you elaborate more on that specific aspect?"
                             : "Certainly! Building on what I mentioned earlier, the content provides additional context that's relevant here..."
                     });
                 }
             }
-            
+
             return sample;
         });
-        
+
         return { samples: enhancedSamples };
     } catch (error) {
         console.error(colors.red(`Error generating RP dataset: ${(error as Error).message}`));
@@ -264,18 +264,18 @@ Generate ${sampleCount} role-playing scenarios with example conversations based 
  * @param sampleCount Number of samples to generate
  */
 export async function generateClassifierDataset(
-    chunk: string, 
-    computeInfo: ComputeInfo, 
-    fileName: string, 
-    chunkIndex: number, 
-    model: any, 
+    chunk: string,
+    computeInfo: ComputeInfo,
+    fileName: string,
+    chunkIndex: number,
+    model: any,
     sampleCount: number
 ) {
     try {
         const { object } = await generateObject({
             model,
             schema: classifierSchema,
-            
+
             prompt: `You are an expert at creating classification examples for training instruction-tuned AI models.
       
 I'll provide you with text content, and I want you to create ${sampleCount} text snippets with appropriate category labels.
@@ -307,15 +307,15 @@ Generate ${sampleCount} diverse classification examples based ONLY on this conte
         const processedSamples = object.samples.map(sample => {
             // Convert category names to lowercase for consistency
             sample.categories = sample.categories.map(cat => cat.toLowerCase().trim());
-            
+
             // Ensure confidence score is present and valid
             if (!sample.confidence || isNaN(sample.confidence)) {
                 sample.confidence = 0.85; // Default high confidence if missing
             }
-            
+
             return sample;
         });
-        
+
         return { samples: processedSamples };
     } catch (error) {
         console.error(colors.red(`Error generating classifier dataset: ${(error as Error).message}`));
@@ -333,11 +333,11 @@ Generate ${sampleCount} diverse classification examples based ONLY on this conte
  * @param sampleCount Number of samples to generate
  */
 export async function generateMultilingualDataset(
-    chunk: string, 
-    computeInfo: ComputeInfo, 
-    fileName: string, 
-    chunkIndex: number, 
-    model: any, 
+    chunk: string,
+    computeInfo: ComputeInfo,
+    fileName: string,
+    chunkIndex: number,
+    model: any,
     sampleCount: number
 ) {
     try {
@@ -345,7 +345,7 @@ export async function generateMultilingualDataset(
         const commonLanguages = [
             "en", "es", "fr", "de", "zh", "ja", "ko", "ru", "ar"
         ];
-        
+
         // Indian Indic languages
         const indicLanguages = [
             "hi", // Hindi
@@ -359,12 +359,15 @@ export async function generateMultilingualDataset(
             "pa", // Punjabi
             "or", // Odia
             "as", // Assamese
-            "sa"  // Sanskrit
+            "sa", // Sanskrit
+            "ur", // Urdu
+            "ar", // Arabic
+
         ];
-        
+
         // User-selected languages
         let selectedLanguages: string[] = [];
-        
+
         if (computeInfo.languages && computeInfo.languages.length > 0) {
             // If user specified languages, use those
             selectedLanguages = computeInfo.languages;
@@ -385,19 +388,19 @@ export async function generateMultilingualDataset(
             process.stdout.write("\n");
             console.log(colors.blue(`Using common languages: ${selectedLanguages.join(', ')}`));
         }
-        
+
         // Limit languages based on sample count to ensure balanced distribution
         const languageCount = Math.min(selectedLanguages.length, sampleCount);
         const languagesToUse = selectedLanguages.slice(0, languageCount);
-        
+
         // Calculate samples per language (ensuring every selected language gets at least one sample)
         const samplesPerLanguage = Math.floor(sampleCount / languageCount);
         const extraSamples = sampleCount % languageCount;
-        
+
         // Ensure we print on a new line, separating from progress bar
         process.stdout.write("\n");
         console.log(colors.gray(`Generating ${sampleCount} samples across ${languageCount} languages (${samplesPerLanguage} per language, ${extraSamples} extra)`));
-        
+
         const { object } = await generateObject({
             model,
             schema: multilingualSchema,
@@ -408,9 +411,9 @@ I'll provide you with text content, and I want you to create ${sampleCount} dive
 For language diversity, include samples in ONLY these specific languages:
 ${languagesToUse.map(l => `- ${l}`).join('\n')}
 
-${computeInfo.includeIndic ? 
-  'IMPORTANT: You MUST include Indian languages as specified above. These are the primary focus languages for this dataset.' : 
-  ''}
+${computeInfo.includeIndic ?
+                    'IMPORTANT: You MUST include Indian languages as specified above. These are the primary focus languages for this dataset.' :
+                    ''}
 
 Try to distribute samples evenly across all the listed languages, with approximately ${samplesPerLanguage} samples per language.
 
@@ -436,9 +439,9 @@ Generate ${sampleCount} high-quality multilingual text samples STRICTLY using on
         const enhancedSamples = object.samples.map(sample => {
             // Standardize language codes to lowercase
             sample.language = sample.language.toLowerCase().trim();
-            
+
             // Fix common language code mistakes
-            const languageFixMap: {[key: string]: string} = {
+            const languageFixMap: { [key: string]: string } = {
                 'english': 'en',
                 'spanish': 'es',
                 'french': 'fr',
@@ -459,50 +462,52 @@ Generate ${sampleCount} high-quality multilingual text samples STRICTLY using on
                 'punjabi': 'pa',
                 'odia': 'or',
                 'assamese': 'as',
-                'sanskrit': 'sa'
+                'sanskrit': 'sa',
+                "urdu": "ur",
+                "arbic": "ar",
             };
-            
+
             if (languageFixMap[sample.language]) {
                 sample.language = languageFixMap[sample.language];
             }
-            
+
             // Replace null values with empty strings to avoid JSON serialization issues
             if (sample.original_language === null) sample.original_language = '';
             if (sample.original_text === null) sample.original_text = '';
             if (sample.cultural_notes === null) sample.cultural_notes = '';
-            
+
             return sample;
         });
-        
+
         // Validate that we have the requested languages
         const resultLanguages = enhancedSamples.map(s => s.language);
         const uniqueLanguages = new Set(resultLanguages);
-        
+
         // Log language distribution with a newline first
         process.stdout.write("\n");
-        const languageDistribution = resultLanguages.reduce((acc: {[key: string]: number}, lang) => {
+        const languageDistribution = resultLanguages.reduce((acc: { [key: string]: number }, lang) => {
             acc[lang] = (acc[lang] || 0) + 1;
             return acc;
         }, {});
-        
+
         console.log(colors.blue(`Generated multilingual samples with distribution: ${JSON.stringify(languageDistribution)}`));
         console.log(colors.blue(`Generated multilingual samples in ${uniqueLanguages.size} different languages`));
-        
+
         // Verify we included Indic languages if requested
         if (computeInfo.includeIndic) {
-            const indicLanguagesIncluded = enhancedSamples.filter(s => 
+            const indicLanguagesIncluded = enhancedSamples.filter(s =>
                 indicLanguages.includes(s.language)
             );
-            
+
             console.log(colors.blue(`Included ${indicLanguagesIncluded.length} Indian Indic language samples`));
-            
+
             // If we're supposed to include Indic languages but none were generated,
             // log a warning message
             if (indicLanguagesIncluded.length === 0 && enhancedSamples.length > 0) {
                 console.warn(colors.yellow(`Warning: No Indian Indic languages were included in the generated samples despite --include-indic flag.`));
             }
         }
-        
+
         return { samples: enhancedSamples };
     } catch (error) {
         // Ensure error is printed on a new line
@@ -517,15 +522,15 @@ Generate ${sampleCount} high-quality multilingual text samples STRICTLY using on
  * @param languages Array of language codes
  * @returns Array of language pairs
  */
-function generateLanguagePairs(languages: string[]): Array<{source: string, target: string}> {
-    const pairs: Array<{source: string, target: string}> = [];
-    
+function generateLanguagePairs(languages: string[]): Array<{ source: string, target: string }> {
+    const pairs: Array<{ source: string, target: string }> = [];
+
     // Always include English as a source/target for better coverage
     const hasEnglish = languages.includes('en');
     if (!hasEnglish) {
         languages.push('en');
     }
-    
+
     // Generate pairs between English and each language
     languages.forEach(lang => {
         if (lang !== 'en') {
@@ -533,26 +538,26 @@ function generateLanguagePairs(languages: string[]): Array<{source: string, targ
             pairs.push({ source: lang, target: 'en' });
         }
     });
-    
+
     // Generate pairs between Indian languages for better coverage
     for (let i = 0; i < languages.length; i++) {
-        for (let j = i + 1; j <languages.length; j++) {
+        for (let j = i + 1; j < languages.length; j++) {
             if (languages[i] !== 'en' && languages[j] !== 'en') {
                 pairs.push({ source: languages[i], target: languages[j] });
                 pairs.push({ source: languages[j], target: languages[i] });
             }
         }
     }
-    
+
     return pairs;
 }
 
 export async function generateParallelCorpusDataset(
-    chunk: string, 
-    computeInfo: ComputeInfo, 
-    fileName: string, 
-    chunkIndex: number, 
-    model: any, 
+    chunk: string,
+    computeInfo: ComputeInfo,
+    fileName: string,
+    chunkIndex: number,
+    model: any,
     sampleCount: number
 ) {
     try {
@@ -566,7 +571,7 @@ export async function generateParallelCorpusDataset(
 
         // Generate language pairs based on user selection or defaults
         let languagePairs = defaultLanguagePairs;
-        
+
         if (computeInfo.languages && computeInfo.languages.length > 0) {
             // Generate pairs from user-selected languages
             languagePairs = generateLanguagePairs(computeInfo.languages);
@@ -577,7 +582,7 @@ export async function generateParallelCorpusDataset(
         const pairsToUse = languagePairs;
         const samplesPerPair = Math.max(1, Math.floor(sampleCount / pairsToUse.length));
         const totalSamples = samplesPerPair * pairsToUse.length;
-        
+
         const { object } = await generateObject({
             model,
             schema: parallelCorpusSchema,
@@ -621,9 +626,9 @@ Generate ${totalSamples} high-quality parallel corpus samples based on this cont
             // Standardize language codes to lowercase
             sample.source_lang = sample.source_lang.toLowerCase().trim();
             sample.target_lang = sample.target_lang.toLowerCase().trim();
-            
+
             // Fix common language code issues
-            const languageFixMap: {[key: string]: string} = {
+            const languageFixMap: { [key: string]: string } = {
                 'english': 'en',
                 'spanish': 'es',
                 'french': 'fr',
@@ -644,21 +649,23 @@ Generate ${totalSamples} high-quality parallel corpus samples based on this cont
                 'punjabi': 'pa',
                 'odia': 'or',
                 'assamese': 'as',
-                'sanskrit': 'sa'
+                'sanskrit': 'sa',
+                'urdu': 'ur',
+                'arbic': 'ar',
             };
-            
+
             if (languageFixMap[sample.source_lang]) {
                 sample.source_lang = languageFixMap[sample.source_lang];
             }
             if (languageFixMap[sample.target_lang]) {
                 sample.target_lang = languageFixMap[sample.target_lang];
             }
-            
+
             // Set default complexity if not provided
             if (!sample.complexity) {
                 sample.complexity = 'standard';
             }
-            
+
             // Assign domain based on content if not set
             if (!sample.domain) {
                 // Simple naive domain detection (could be expanded)
@@ -670,14 +677,14 @@ Generate ${totalSamples} high-quality parallel corpus samples based on this cont
                     sample.domain = 'general';
                 }
             }
-            
+
             return sample;
         });
-        
+
         // Filter samples to ensure they match requested language pairs
         const validSamples = enhancedSamples.filter(sample => {
-            return pairsToUse.some(pair => 
-                pair.source === sample.source_lang && 
+            return pairsToUse.some(pair =>
+                pair.source === sample.source_lang &&
                 pair.target === sample.target_lang
             );
         });
@@ -699,11 +706,11 @@ Generate ${totalSamples} high-quality parallel corpus samples based on this cont
  * @param sampleCount Number of samples to generate
  */
 export async function generateInstructionDataset(
-    chunk: string, 
-    computeInfo: ComputeInfo, 
-    fileName: string, 
-    chunkIndex: number, 
-    model: any, 
+    chunk: string,
+    computeInfo: ComputeInfo,
+    fileName: string,
+    chunkIndex: number,
+    model: any,
     sampleCount: number
 ) {
     try {
@@ -715,11 +722,11 @@ export async function generateInstructionDataset(
             'creative',  // Instructions requiring creative output
             'analytical' // Instructions requiring analysis
         ];
-        
+
         // Calculate balanced distribution of instruction types
         const typesCount = Math.min(sampleCount, instructionTypes.length);
         const samplesPerType = Math.ceil(sampleCount / typesCount);
-        
+
         const { object } = await generateObject({
             model,
             schema: instructionSchema,
@@ -759,17 +766,17 @@ Generate ${sampleCount} high-quality instruction-following samples based on this
             if (sample.instruction.length < 15) {
                 sample.instruction = `Based on the provided content, ${sample.instruction}`;
             }
-            
+
             // Ensure output is detailed enough
             if (sample.output.length < 30 && !sample.instruction.includes("briefly")) {
                 sample.output += " [Note: This response has been expanded to be more detailed and helpful.]";
             }
-            
+
             // If no language is specified, default to English
             if (!sample.language) {
                 sample.language = "en";
             }
-            
+
             // If no instruction type is specified, infer it
             if (!sample.instruction_type) {
                 if (sample.instruction.includes("steps") || sample.instruction.includes("first") || sample.instruction.includes("then")) {
@@ -784,19 +791,19 @@ Generate ${sampleCount} high-quality instruction-following samples based on this
                     sample.instruction_type = "direct";
                 }
             }
-            
+
             return sample;
         });
-        
+
         // Check distribution of instruction types
-        const typeDistribution = enhancedSamples.reduce((dist: {[key: string]: number}, sample) => {
+        const typeDistribution = enhancedSamples.reduce((dist: { [key: string]: number }, sample) => {
             const type = sample.instruction_type;
             dist[type] = (dist[type] || 0) + 1;
             return dist;
         }, {});
-        
+
         console.log(colors.blue(`Instruction type distribution: ${JSON.stringify(typeDistribution)}`));
-        
+
         return { samples: enhancedSamples };
     } catch (error) {
         console.error(colors.red(`Error generating instruction dataset: ${(error as Error).message}`));
@@ -814,18 +821,18 @@ Generate ${sampleCount} high-quality instruction-following samples based on this
  * @param sampleCount Number of samples to generate
  */
 export async function generateSummarizationDataset(
-    chunk: string, 
-    computeInfo: ComputeInfo, 
-    fileName: string, 
-    chunkIndex: number, 
-    model: any, 
+    chunk: string,
+    computeInfo: ComputeInfo,
+    fileName: string,
+    chunkIndex: number,
+    model: any,
     sampleCount: number
 ) {
     try {
         // Define summary types for better distribution
         const summaryTypes = ['extractive', 'abstractive', 'hybrid'];
         const languages = ['en', 'es', 'fr', 'de', 'zh'];
-        
+
         const { object } = await generateObject({
             model,
             schema: summarizationSchema,
@@ -870,37 +877,37 @@ Generate ${sampleCount} high-quality summarization samples based on this content
                 const summaryLength = sample.summary.length;
                 sample.length_ratio = summaryLength / docLength;
             }
-            
+
             // Ensure length ratio is in range
             sample.length_ratio = Math.min(1, Math.max(0, sample.length_ratio));
-            
+
             // If no language is specified, default to English
             if (!sample.language) {
                 sample.language = "en";
             }
-            
+
             // If key points aren't specified, create placeholder
             if (!sample.key_points_covered || !Array.isArray(sample.key_points_covered) || sample.key_points_covered.length === 0) {
                 // Extract nouns and verbs as key concepts using simple heuristic
                 const sentences = sample.summary.split(/[.!?]+/).filter((s: string) => s.trim().length > 0);
                 const keyPoints = sentences.slice(0, Math.min(3, sentences.length))
                     .map((s: string) => s.trim());
-                
+
                 sample.key_points_covered = keyPoints;
             }
-            
+
             return sample;
         });
-        
+
         // Check summary type distribution
-        const typeDistribution = enhancedSamples.reduce((dist: {[key: string]: number}, sample) => {
+        const typeDistribution = enhancedSamples.reduce((dist: { [key: string]: number }, sample) => {
             const type = sample.summary_type;
             dist[type] = (dist[type] || 0) + 1;
             return dist;
         }, {});
-        
+
         console.log(colors.blue(`Summary type distribution: ${JSON.stringify(typeDistribution)}`));
-        
+
         return { samples: enhancedSamples };
     } catch (error) {
         console.error(colors.red(`Error generating summarization dataset: ${(error as Error).message}`));
