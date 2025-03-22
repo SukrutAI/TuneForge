@@ -31,7 +31,8 @@ export function convertShareGPTFormat(sample: ShareGPTSample): any {
     conversations: sample.conversations.map(msg => ({
       role: msg.from === 'human' ? 'user' : 'assistant',
       content: msg.value
-    }))
+    })),
+    language: sample.language // Include language in output
   };
 }
 

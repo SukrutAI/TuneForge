@@ -7,6 +7,13 @@
 import { generateObject } from 'ai';
 import colors from '../utils/colors';
 import { z } from 'zod';
+import { 
+    normalizeLanguageCode, 
+    COMMON_LANGUAGE_CODES, 
+    INDIC_LANGUAGE_CODES,
+    LANGUAGE_CODE_MAP,
+    detectDomain
+} from '../utils/languageUtils';
 import type { 
     ComputeInfo,
     ParallelCorpusEntry,
@@ -114,17 +121,15 @@ export async function generateParallelCorporaDataset(
 ) {
     try {
         // Determine languages to use
-        const selectedLanguages = computeInfo.languages || 
-            ['english', 'french', 'spanish', 'german', 'chinese', 'arabic', 'hindi'];
+        const selectedLanguages = computeInfo.languages || COMMON_LANGUAGE_CODES;
         
         // For Indic languages, add some common ones
         if (computeInfo.includeIndic) {
-            ['hindi', 'bengali', 'tamil', 'telugu', 'marathi']
-                .forEach(lang => {
-                    if (!selectedLanguages.includes(lang)) {
-                        selectedLanguages.push(lang);
-                    }
-                });
+            INDIC_LANGUAGE_CODES.forEach(lang => {
+                if (!selectedLanguages.includes(lang)) {
+                    selectedLanguages.push(lang);
+                }
+            });
         }
 
         const { object } = await generateObject({
@@ -159,7 +164,7 @@ Generate ${sampleCount} parallel corpus examples with alignments across multiple
             // Standardize language names to lowercase
             const standardizedSample: Record<string, string> = {};
             for (const [lang, text] of Object.entries(sample)) {
-                standardizedSample[lang.toLowerCase()] = text;
+                standardizedSample[normalizeLanguageCode(lang)] = text;
             }
             
             return standardizedSample;
@@ -191,16 +196,10 @@ export async function generateMonolingualTextDataset(
 ) {
     try {
         // Default languages to sample from (will be distributed across the samples)
-        const defaultLanguages = [
-            "english", "spanish", "french", "german", "chinese", 
-            "japanese", "korean", "arabic", "russian", "hindi"
-        ];
+        const defaultLanguages = COMMON_LANGUAGE_CODES;
         
         // Add Indic languages if requested
-        const indicLanguages = [
-            "hindi", "bengali", "tamil", "telugu", 
-            "marathi", "gujarati", "kannada", "malayalam"
-        ];
+        const indicLanguages = INDIC_LANGUAGE_CODES;
         
         // Determine languages to use
         let selectedLanguages = computeInfo.languages || defaultLanguages;
@@ -235,34 +234,7 @@ Generate ${sampleCount} high-quality monolingual text samples distributed across
         // Post-process to ensure quality
         const enhancedSamples = object.samples.map((sample: MonolingualTextEntry) => {
             // Standardize language codes
-            sample.language = sample.language.toLowerCase();
-            
-            // Fix common language code issues
-            const languageFixMap: {[key: string]: string} = {
-                'english': 'en',
-                'spanish': 'es',
-                'french': 'fr',
-                'german': 'de',
-                'chinese': 'zh',
-                'japanese': 'ja',
-                'korean': 'ko',
-                'russian': 'ru',
-                'arabic': 'ar',
-                'hindi': 'hi',
-                'bengali': 'bn',
-                'telugu': 'te',
-                'tamil': 'ta',
-                'marathi': 'mr',
-                'gujarati': 'gu',
-                'kannada': 'kn',
-                'malayalam': 'ml',
-                'punjabi': 'pa',
-                'urdu': 'ur',
-            };
-            
-            if (languageFixMap[sample.language]) {
-                sample.language = languageFixMap[sample.language];
-            }
+            sample.language = normalizeLanguageCode(sample.language);
             
             return sample;
         });
@@ -306,7 +278,7 @@ export async function generateInstructionTuningDataset(
         const samplesPerType = Math.ceil(sampleCount / typesCount);
         
         // Default languages to sample from (will be distributed across the samples)
-        const defaultLanguages = ["en", "es", "fr", "de", "zh", "hi"];
+        const defaultLanguages = COMMON_LANGUAGE_CODES;
         
         // Determine languages to use
         let selectedLanguages = computeInfo.languages || defaultLanguages;
@@ -342,23 +314,7 @@ Generate ${sampleCount} high-quality instruction tuning examples based on this c
         // Post-process to ensure quality
         const enhancedSamples = object.samples.map((sample: InstructionTuningEntry) => {
             // Standardize language codes
-            sample.language = sample.language.toLowerCase();
-            
-            // Fix common language code issues
-            const languageFixMap: {[key: string]: string} = {
-                'english': 'en',
-                'spanish': 'es',
-                'french': 'fr',
-                'german': 'de',
-                'chinese': 'zh',
-                'japanese': 'ja',
-                'korean': 'ko',
-                'hindi': 'hi'
-            };
-            
-            if (languageFixMap[sample.language]) {
-                sample.language = languageFixMap[sample.language];
-            }
+            sample.language = normalizeLanguageCode(sample.language);
             
             // Ensure instruction type is assigned
             if (!sample.instruction_type) {
@@ -403,7 +359,7 @@ export async function generateBenchmarkDataset(
         ];
         
         // Default languages
-        const defaultLanguages = ["en", "es", "fr", "ar", "zh", "hi", "ru"];
+        const defaultLanguages = COMMON_LANGUAGE_CODES;
         
         // Determine languages to use
         const selectedLanguages = computeInfo.languages || defaultLanguages;
@@ -447,35 +403,7 @@ Generate ${sampleCount} high-quality benchmark evaluation examples based on this
         // Post-process to ensure quality
         const enhancedSamples = object.samples.map((sample: BenchmarkEvaluationEntry) => {
             // Standardize language codes
-            sample.language = sample.language.toLowerCase();
-            
-            // Fix common language code issues
-            const languageFixMap: {[key: string]: string} = {
-                'english': 'en',
-                'spanish': 'es',
-                'french': 'fr',
-                'german': 'de',
-                'chinese': 'zh',
-                'arabic': 'ar',
-                'hindi': 'hi',
-                'russian': 'ru',
-                "urdu": "ur",
-                "bengali": "bn",
-                "tamil": "ta",
-                "telugu": "te",
-                "marathi": "mr",
-                "gujarati": "gu",
-                "kannada": "kn",
-                "malayalam": "ml",
-                "punjabi": "pa",
-                "korean": "ko",
-                "japanese": "ja"
-                
-            };
-            
-            if (languageFixMap[sample.language]) {
-                sample.language = languageFixMap[sample.language];
-            }
+            sample.language = normalizeLanguageCode(sample.language);
             
             // Add default for missing fields based on task type
             if (sample.task === 'sentiment_analysis' && !sample.label) {
@@ -521,7 +449,7 @@ export async function generateDomainSpecificDataset(
         ];
         
         // Default languages
-        const defaultLanguages = ["en", "fr", "es", "de", "zh", "ar", "hi"];
+        const defaultLanguages = COMMON_LANGUAGE_CODES;
         
         // Determine languages to use
         const selectedLanguages = computeInfo.languages || defaultLanguages;
@@ -562,22 +490,7 @@ Generate ${sampleCount} high-quality domain-specific examples based on this cont
         // Post-process to ensure quality
         const enhancedSamples = object.samples.map((sample: DomainSpecificEntry) => {
             // Standardize language codes
-            sample.language = sample.language.toLowerCase();
-            
-            // Fix common language code issues
-            const languageFixMap: {[key: string]: string} = {
-                'english': 'en',
-                'spanish': 'es',
-                'french': 'fr',
-                'german': 'de',
-                'chinese': 'zh',
-                'arabic': 'ar',
-                'hindi': 'hi'
-            };
-            
-            if (languageFixMap[sample.language]) {
-                sample.language = languageFixMap[sample.language];
-            }
+            sample.language = normalizeLanguageCode(sample.language);
             
             // If no translation provided for non-English content, add placeholder note
             if (sample.language !== 'en' && !sample.translation) {
@@ -613,7 +526,7 @@ export async function generateWebCrawledDataset(
 ) {
     try {
         // Default languages
-        const defaultLanguages = ["en", "es", "fr", "de", "zh", "ja", "hi", "ar", "ru"];
+        const defaultLanguages = COMMON_LANGUAGE_CODES;
         
         // Determine languages to use
         const selectedLanguages = computeInfo.languages || defaultLanguages;
@@ -647,25 +560,7 @@ Generate ${sampleCount} high-quality web page examples based on this content.`,
         // Post-process to ensure quality
         const enhancedSamples = object.samples.map((sample: WebCrawledEntry) => {
             // Standardize language codes
-            sample.language = sample.language.toLowerCase();
-            
-            // Fix common language code issues
-            const languageFixMap: {[key: string]: string} = {
-                'english': 'en',
-                'spanish': 'es',
-                'french': 'fr',
-                'german': 'de',
-                'chinese': 'zh',
-                'japanese': 'ja',
-                'korean': 'ko',
-                'arabic': 'ar',
-                'hindi': 'hi',
-                'russian': 'ru'
-            };
-            
-            if (languageFixMap[sample.language]) {
-                sample.language = languageFixMap[sample.language];
-            }
+            sample.language = normalizeLanguageCode(sample.language);
             
             // Ensure URL has protocol
             if (!sample.url.startsWith('http')) {

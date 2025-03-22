@@ -177,6 +177,7 @@ export interface AlpacaSample {
     instruction: string;
     input: string;
     output: string;
+    language?: string;
 }
 
 export interface ShareGPTSample {
@@ -184,10 +185,12 @@ export interface ShareGPTSample {
         from: 'human' | 'assistant';
         value: string;
     }>;
+    language: string;
 }
 
 export interface RawCorpusSample {
     text: string;
+    language?: string;
 }
 
 // Dataset results container - updated with standardized formats

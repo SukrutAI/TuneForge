@@ -7,6 +7,13 @@ import { generateObject } from 'ai';
 import colors from '../utils/colors';
 import { z } from 'zod';
 import type { ComputeInfo } from '../types/index';
+import { 
+    COMMON_LANGUAGE_CODES, 
+    INDIC_LANGUAGE_CODES, 
+    normalizeLanguageCode, 
+    
+    detectDomain
+} from '../utils/languageUtils';
 
 // Zod schema for QA dataset
 const qaSchema = z.object({
@@ -342,28 +349,10 @@ export async function generateMultilingualDataset(
 ) {
     try {
         // Common languages to ensure good distribution
-        const commonLanguages = [
-            "en", "es", "fr", "de", "zh", "ja", "ko", "ru", "ar"
-        ];
+        const commonLanguages = COMMON_LANGUAGE_CODES;
 
         // Indian Indic languages
-        const indicLanguages = [
-            "hi", // Hindi
-            "bn", // Bengali
-            "te", // Telugu
-            "ta", // Tamil
-            "mr", // Marathi
-            "gu", // Gujarati
-            "kn", // Kannada
-            "ml", // Malayalam
-            "pa", // Punjabi
-            "or", // Odia
-            "as", // Assamese
-            "sa", // Sanskrit
-            "ur", // Urdu
-            "ar", // Arabic
-
-        ];
+        const indicLanguages = INDIC_LANGUAGE_CODES;
 
         // User-selected languages
         let selectedLanguages: string[] = [];
@@ -438,38 +427,7 @@ Generate ${sampleCount} high-quality multilingual text samples STRICTLY using on
         // Post-process to ensure quality and language diversity
         const enhancedSamples = object.samples.map(sample => {
             // Standardize language codes to lowercase
-            sample.language = sample.language.toLowerCase().trim();
-
-            // Fix common language code mistakes
-            const languageFixMap: { [key: string]: string } = {
-                'english': 'en',
-                'spanish': 'es',
-                'french': 'fr',
-                'german': 'de',
-                'chinese': 'zh',
-                'japanese': 'ja',
-                'korean': 'ko',
-                'russian': 'ru',
-                'arabic': 'ar',
-                'hindi': 'hi',
-                'bengali': 'bn',
-                'telugu': 'te',
-                'tamil': 'ta',
-                'marathi': 'mr',
-                'gujarati': 'gu',
-                'kannada': 'kn',
-                'malayalam': 'ml',
-                'punjabi': 'pa',
-                'odia': 'or',
-                'assamese': 'as',
-                'sanskrit': 'sa',
-                "urdu": "ur",
-                "arbic": "ar",
-            };
-
-            if (languageFixMap[sample.language]) {
-                sample.language = languageFixMap[sample.language];
-            }
+            sample.language = normalizeLanguageCode(sample.language);
 
             // Replace null values with empty strings to avoid JSON serialization issues
             if (sample.original_language === null) sample.original_language = '';
@@ -624,42 +582,8 @@ Generate ${totalSamples} high-quality parallel corpus samples based on this cont
         // Post-process to ensure quality and standardize language codes
         const enhancedSamples = object.samples.map(sample => {
             // Standardize language codes to lowercase
-            sample.source_lang = sample.source_lang.toLowerCase().trim();
-            sample.target_lang = sample.target_lang.toLowerCase().trim();
-
-            // Fix common language code issues
-            const languageFixMap: { [key: string]: string } = {
-                'english': 'en',
-                'spanish': 'es',
-                'french': 'fr',
-                'german': 'de',
-                'chinese': 'zh',
-                'japanese': 'ja',
-                'korean': 'ko',
-                'russian': 'ru',
-                'arabic': 'ar',
-                'hindi': 'hi',
-                'bengali': 'bn',
-                'telugu': 'te',
-                'tamil': 'ta',
-                'marathi': 'mr',
-                'gujarati': 'gu',
-                'kannada': 'kn',
-                'malayalam': 'ml',
-                'punjabi': 'pa',
-                'odia': 'or',
-                'assamese': 'as',
-                'sanskrit': 'sa',
-                'urdu': 'ur',
-                'arbic': 'ar',
-            };
-
-            if (languageFixMap[sample.source_lang]) {
-                sample.source_lang = languageFixMap[sample.source_lang];
-            }
-            if (languageFixMap[sample.target_lang]) {
-                sample.target_lang = languageFixMap[sample.target_lang];
-            }
+            sample.source_lang = normalizeLanguageCode(sample.source_lang);
+            sample.target_lang = normalizeLanguageCode(sample.target_lang);
 
             // Set default complexity if not provided
             if (!sample.complexity) {
@@ -668,14 +592,7 @@ Generate ${totalSamples} high-quality parallel corpus samples based on this cont
 
             // Assign domain based on content if not set
             if (!sample.domain) {
-                // Simple naive domain detection (could be expanded)
-                if (sample.source.match(/\bcode\b|\bfunction\b|\bclass\b|=/)) {
-                    sample.domain = 'technical';
-                } else if (sample.source.match(/\btransaction\b|\bfunds\b|\bmarket\b|\bprice\b/)) {
-                    sample.domain = 'financial';
-                } else {
-                    sample.domain = 'general';
-                }
+                sample.domain = detectDomain(sample.source);
             }
 
             return sample;

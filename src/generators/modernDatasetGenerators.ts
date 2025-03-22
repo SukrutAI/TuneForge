@@ -7,13 +7,15 @@ import { generateObject } from 'ai';
 import colors from '../utils/colors';
 import { z } from 'zod';
 import type { ComputeInfo, AlpacaSample, ShareGPTSample, RawCorpusSample } from '../types/index';
+import { normalizeLanguageCode, COMMON_LANGUAGE_CODES, INDIC_LANGUAGE_CODES } from '../utils/languageUtils';
 
 // Zod schema for Alpaca format (instruction-based dataset)
 const alpacaSchema = z.object({
     samples: z.array(z.object({
         instruction: z.string().describe('A clear instruction for the model to perform'),
         input: z.string().describe('Optional input context or query for the instruction'),
-        output: z.string().describe('The expected output for the instruction and input')
+        output: z.string().describe('The expected output for the instruction and input'),
+        language: z.string().optional().describe('ISO language code (e.g., "en", "hi", "es")')
     }))
 });
 
@@ -23,14 +25,16 @@ const sharegptSchema = z.object({
         conversations: z.array(z.object({
             from: z.enum(['human', 'assistant']).describe('Who is speaking: human or assistant'),
             value: z.string().describe('The content of the message')
-        })).min(2).describe('A conversation between a human and an AI assistant')
+        })).min(2).describe('A conversation between a human and an AI assistant'),
+        language: z.string().describe('ISO language code (e.g., "en", "hi", "es")')
     }))
 });
 
 // Zod schema for raw corpus format (continued pretraining)
 const rawCorpusSchema = z.object({
     samples: z.array(z.object({
-        text: z.string().describe('Long-form text for continued pretraining')
+        text: z.string().describe('Long-form text for continued pretraining'),
+        language: z.string().optional().describe('ISO language code (e.g., "en", "hi", "es")')
     }))
 });
 
@@ -157,6 +161,26 @@ export async function generateShareGPTDataset(
             'instruction-following'
         ];
         
+        // Determine languages to use
+        let selectedLanguages = ['en']; // Default to English
+        
+        if (computeInfo.languages && computeInfo.languages.length > 0) {
+            // Use languages specified by the user
+            selectedLanguages = computeInfo.languages;
+            console.log(colors.blue(`Generating ShareGPT conversations in specified languages: ${selectedLanguages.join(', ')}`));
+        } else if (computeInfo.includeIndic) {
+            // If includeIndic flag is set but no specific languages are provided, use Hindi as default
+            selectedLanguages = ['hi'];
+            console.log(colors.blue(`Generating ShareGPT conversations in Hindi`));
+        }
+        
+        // Get language name for prompt clarity
+        const languageNames = selectedLanguages.map(code => {
+            if (code === 'hi') return 'Hindi';
+            if (code === 'en') return 'English';
+            return code;
+        });
+        
         const { object } = await generateObject({
             model,
             schema: sharegptSchema,
@@ -164,8 +188,11 @@ export async function generateShareGPTDataset(
             
 I'll provide you with text content, and I want you to create ${sampleCount} realistic conversations in ShareGPT format.
 
+IMPORTANT: Create conversations in ${languageNames.join(' and ')} language.
+
 Each conversation should:
 - Start with a human message and alternate between human and assistant
+- Be written completely in ${languageNames.join(' or ')} (both human and assistant messages)
 - Contain at least 2-4 turns per speaker (4-8 messages total)
 - Be coherent, natural, and representative of how humans and assistants interact
 - Cover topics derived from the provided content
@@ -184,38 +211,76 @@ IMPORTANT GUIDELINES:
 3. Ensure conversations build on previous context
 4. Include diverse conversation types (informational, problem-solving, etc.)
 5. Make conversations interesting enough to be useful for training
+6. Use culturally appropriate expressions and references for the language
+7. Ensure the language used is natural and not a direct translation from English
 
 Here's the content (file: ${fileName}, chunk: ${chunkIndex + 1}):
 
 ${chunk}
 
-Generate ${sampleCount} high-quality ShareGPT conversations that would be effective for fine-tuning assistant models.`,
+Generate ${sampleCount} high-quality ShareGPT conversations in ${languageNames.join(' and ')} language that would be effective for fine-tuning assistant models.`,
         });
 
-        // Post-process to ensure quality
-        const enhancedSamples = object.samples.map((sample: ShareGPTSample) => {
+        // Post-process to ensure quality and assign languages
+        const enhancedSamples = object.samples.map((sample: ShareGPTSample, index: number) => {
+            // Assign a language to each sample - distribute across selected languages
+            const languageIndex = index % selectedLanguages.length;
+            sample.language = selectedLanguages[languageIndex];
+            
             // Ensure conversations start with human
             if (sample.conversations.length > 0 && sample.conversations[0].from !== 'human') {
+                // Add culturally appropriate greeting based on language
+                let greeting = "Hello, I'd like to discuss something with you.";
+                
+                if (sample.language === 'hi') {
+                    greeting = "नमस्ते, मैं आपसे कुछ बात करना चाहता हूँ।";
+                } else if (sample.language === 'te') {
+                    greeting = "హలో, నేను మీతో కొన్ని విషయాలు చర్చించాలనుకుంటున్నాను.";
+                } else if (sample.language === 'ta') {
+                    greeting = "வணக்கம், நான் உங்களுடன் ஏதோ விவாதிக்க விரும்புகிறேன்.";
+                }
+                
                 sample.conversations.unshift({
                     from: 'human',
-                    value: "Hello, I'd like to discuss something with you."
+                    value: greeting
                 });
             }
             
             // Ensure conversations have at least 4 turns
             if (sample.conversations.length < 4) {
-                // Add generic turns to reach minimum length
+                // Add generic turns to reach minimum length in appropriate language
                 while (sample.conversations.length < 4) {
                     const isHuman = sample.conversations.length % 2 === 0;
+                    
                     if (isHuman) {
+                        let followUp = "Can you tell me more about that?";
+                        
+                        if (sample.language === 'hi') {
+                            followUp = "क्या आप मुझे इसके बारे में और बता सकते हैं?";
+                        } else if (sample.language === 'te') {
+                            followUp = "దాని గురించి మరింత చెప్పగలరా?";
+                        } else if (sample.language === 'ta') {
+                            followUp = "அதைப் பற்றி மேலும் சொல்ல முடியுமா?";
+                        }
+                        
                         sample.conversations.push({
                             from: 'human',
-                            value: "Can you tell me more about that?"
+                            value: followUp
                         });
                     } else {
+                        let response = "I'd be happy to elaborate. Based on the information we've discussed...";
+                        
+                        if (sample.language === 'hi') {
+                            response = "मैं विस्तार से बताने में खुशी होगी। हमारी चर्चा के आधार पर...";
+                        } else if (sample.language === 'te') {
+                            response = "నేను వివరించడానికి సంతోషిస్తున్నాను. మనం చర్చించిన సమాచారం ఆధారంగా...";
+                        } else if (sample.language === 'ta') {
+                            response = "நான் விளக்க மகிழ்ச்சியடைகிறேன். நாம் விவாதித்த தகவலின் அடிப்படையில்...";
+                        }
+                        
                         sample.conversations.push({
                             from: 'assistant',
-                            value: "I'd be happy to elaborate. Based on the information we've discussed..."
+                            value: response
                         });
                     }
                 }
@@ -224,7 +289,15 @@ Generate ${sampleCount} high-quality ShareGPT conversations that would be effect
             return sample;
         });
         
+        // Log language distribution
+        const languageDistribution = enhancedSamples.reduce((dist: Record<string, number>, sample: ShareGPTSample) => {
+            dist[sample.language] = (dist[sample.language] || 0) + 1;
+            return dist;
+        }, {});
+        
         console.log(colors.green(`Generated ${enhancedSamples.length} ShareGPT conversation examples`));
+        console.log(colors.blue(`Language distribution: ${JSON.stringify(languageDistribution)}`));
+        
         return { samples: enhancedSamples };
     } catch (error) {
         console.error(colors.red(`Error generating ShareGPT dataset: ${(error as Error).message}`));

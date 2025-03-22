@@ -8,25 +8,17 @@ import { generateObject } from 'ai';
 import colors from '../utils/colors';
 import { z } from 'zod';
 import type { ComputeInfo } from '../types/index';
+import { 
+    INDIC_LANGUAGE_CODES, 
+    LANGUAGE_NAME_MAP, 
+    normalizeLanguageCode,
+    detectDomain
+} from '../utils/languageUtils';
 
-// List of Indian languages with ISO codes
-const INDIC_LANGUAGES = {
-    'hi': 'Hindi',
-    'bn': 'Bengali',
-    'te': 'Telugu',
-    'ta': 'Tamil',
-    'mr': 'Marathi',
-    'gu': 'Gujarati',
-    'kn': 'Kannada',
-    'ml': 'Malayalam',
-    'pa': 'Punjabi',
-    'or': 'Odia',
-    'as': 'Assamese',
-    'sa': 'Sanskrit',
-    'ur': 'Urdu',
-    'ar': 'Arabic',
-    'en': 'English',
-};
+// Maps of language codes to names, using centralized definitions
+const INDIC_LANGUAGES = Object.fromEntries(
+    INDIC_LANGUAGE_CODES.map(code => [code, LANGUAGE_NAME_MAP[code] || code])
+);
 
 // Zod schema for summarization corpus (crosssum_in style)
 const indicSummarizationSchema = z.object({
@@ -486,66 +478,4 @@ Generate ${sampleCount} high-quality cross-lingual QA examples.`,
         console.error(colors.red(`Error generating Indic cross-lingual QA dataset: ${(error as Error).message}`));
         return { samples: [] };
     }
-}
-
-/**
- * Utility function to detect the domain of a text
- * @param text Input text to analyze
- * @returns Detected domain
- */
-function detectDomain(text: string): string {
-    const text_lower = text.toLowerCase();
-    
-    // News domain detection
-    if (text_lower.includes('news') || 
-        text_lower.includes('report') || 
-        text_lower.includes('journalist') ||
-        text_lower.includes('media') ||
-        text_lower.includes('today') ||
-        text_lower.includes('headlines')) {
-        return 'news';
-    }
-    
-    // Scientific/technical domain detection
-    if (text_lower.includes('research') || 
-        text_lower.includes('study') || 
-        text_lower.includes('scientific') ||
-        text_lower.includes('data') ||
-        text_lower.includes('analysis') ||
-        text_lower.includes('technology')) {
-        return 'scientific';
-    }
-    
-    // Legal domain detection
-    if (text_lower.includes('law') || 
-        text_lower.includes('legal') || 
-        text_lower.includes('court') ||
-        text_lower.includes('rights') ||
-        text_lower.includes('justice') ||
-        text_lower.includes('constitution')) {
-        return 'legal';
-    }
-    
-    // Medical domain detection
-    if (text_lower.includes('health') || 
-        text_lower.includes('medical') || 
-        text_lower.includes('doctor') ||
-        text_lower.includes('patient') ||
-        text_lower.includes('disease') ||
-        text_lower.includes('treatment')) {
-        return 'medical';
-    }
-    
-    // Educational domain detection
-    if (text_lower.includes('education') || 
-        text_lower.includes('school') || 
-        text_lower.includes('student') ||
-        text_lower.includes('learn') ||
-        text_lower.includes('teacher') ||
-        text_lower.includes('knowledge')) {
-        return 'educational';
-    }
-    
-    // Default to general domain
-    return 'general';
 }
