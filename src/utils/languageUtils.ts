@@ -172,6 +172,17 @@ export const LANGUAGE_CODE_MAP: { [key: string]: string } = {
     'lojban': 'jbo',
     'toki pona': 'tok',
 
+    // Mixed/Creole Languages
+    'hinglish': 'hi-en',  // Hindi-English code switching
+    'tanglish': 'ta-en',  // Tamil-English code switching
+    'benglish': 'bn-en',  // Bengali-English code switching
+    'manglish': 'ml-en',  // Malayalam-English code switching
+    'tenglish': 'te-en',  // Telugu-English code switching
+    'punglish': 'pa-en',  // Punjabi-English code switching
+    'gujlish': 'gu-en',   // Gujarati-English code switching
+    'marglish': 'mr-en',  // Marathi-English code switching
+    'kanglish': 'kn-en',  // Kannada-English code switching
+    
     // Common misspellings and alternative names
     'arbic': 'ar',
     'bangla': 'bn',
@@ -432,6 +443,22 @@ export const AFRICAN_LANGUAGE_CODES = [
 ];
 
 /**
+ * Mixed language codes for code-switching languages like Hinglish
+ */
+export const MIXED_LANGUAGE_CODES = [
+    "hi-en", // Hinglish (Hindi-English)
+    "ta-en", // Tanglish (Tamil-English)
+    "bn-en", // Benglish (Bengali-English)
+    "ml-en", // Manglish (Malayalam-English)
+    "te-en", // Tenglish (Telugu-English)
+    "pa-en", // Punglish (Punjabi-English)
+    "gu-en", // Gujlish (Gujarati-English)
+    "mr-en", // Marglish (Marathi-English)
+    "kn-en", // Kanglish (Kannada-English)
+    "ur-en", // Urdu-English code switching
+];
+
+/**
  * Normalizes a language identifier to a standard ISO code
  * Handles both full names and codes regardless of case
  * 
@@ -503,6 +530,17 @@ export function isEastAsianLanguage(code: string): boolean {
 export function isAfricanLanguage(code: string): boolean {
     const normalized = normalizeLanguageCode(code);
     return AFRICAN_LANGUAGE_CODES.includes(normalized);
+}
+
+/**
+ * Checks if a language code belongs to the Mixed/Creole languages group
+ * 
+ * @param code Language code to check
+ * @returns True if the language is a mixed language
+ */
+export function isMixedLanguage(code: string): boolean {
+    const normalized = normalizeLanguageCode(code);
+    return MIXED_LANGUAGE_CODES.includes(normalized);
 }
 
 /**
